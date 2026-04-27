@@ -8,7 +8,6 @@ from flask_cors import CORS
 import csv
 import os
 import json
-import ollama
 from datetime import datetime
 
 app = Flask(__name__, static_folder="frontend/dist", static_url_path="")
