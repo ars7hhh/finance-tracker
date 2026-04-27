@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
+
+echo "Installing Python dependencies..."
 pip install -r requirements.txt
+
+echo "Building frontend..."
+
 cd frontend
+
 npm install
-chmod +x node_modules/.bin/vite
+
 npm run build
+
 cd ..
+
+echo "Build complete"

@@ -1,3 +1,8 @@
+try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except:
+    OLLAMA_AVAILABLE = False
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import csv
@@ -8,6 +13,18 @@ from datetime import datetime
 
 app = Flask(__name__, static_folder="frontend/dist", static_url_path="")
 CORS(app)
+@app.route("/")
+def serve():
+    return send_from_directory(
+        app.static_folder,
+        "index.html"
+    )
+@app.route("/<path:path>")
+def static_proxy(path):
+    return send_from_directory(
+        app.static_folder,
+        path
+    )
 
 DATA_FILE = "data/transactions.csv"
 BUDGET_FILE = "data/budgets.json"
@@ -178,33 +195,28 @@ def ai_analyze():
 
     data = request.json
 
-    prompt = f"""
-You are a financial assistant.
+    summary = f"""
+Analyze the following financial summary and provide short insights.
 
-Analyze the following financial data and provide:
-
-- Exactly 3 insights
-- Exactly 3 actionable recommendations
-
-Total income: ₹{data['total_income']}
-Total expenses: ₹{data['total_expenses']}
-Category spending: {data['cat_totals']}
-Budgets: {data['budgets']}
+Total income: ₹{data.get('total_income', 0)}
+Total expenses: ₹{data.get('total_expenses', 0)}
+Category totals: {data.get('cat_totals', {})}
+Budgets: {data.get('budgets', {})}
 
 Keep the response very short.
-Return exactly 3 lines using this format:
-
-INSIGHT: one sentence
-IMPACT: one short sentence
-ACTION: one short recommendation
 """
+
+    if not OLLAMA_AVAILABLE:
+        return jsonify({
+            "result": "AI analysis unavailable in cloud deployment."
+        })
 
     response = ollama.chat(
         model="tinyllama",
         messages=[
             {
                 "role": "user",
-                "content": prompt
+                "content": summary
             }
         ]
     )
@@ -235,6 +247,11 @@ Budgets:
 Keep the response very short.
 """
 
+    if not OLLAMA_AVAILABLE:
+        return jsonify({
+            "result": "AI unavailable in cloud deployment."
+        })
+
     response = ollama.chat(
         model="tinyllama",
         messages=[
@@ -254,7 +271,6 @@ def ai_ask():
     data = request.json
 
     question = data.get("question", "")
-
     total_income = data.get("total_income", 0)
     total_expenses = data.get("total_expenses", 0)
     cat_totals = data.get("cat_totals", {})
@@ -274,10 +290,13 @@ User question:
 Answer clearly in 1 sentence.
 """
 
-    import ollama
+    if not OLLAMA_AVAILABLE:
+        return jsonify({
+            "result": "AI assistant unavailable in cloud deployment."
+        })
 
     response = ollama.chat(
-        model="tinyllama",   # or llama3
+        model="tinyllama",
         messages=[
             {
                 "role": "user",
@@ -515,9 +534,13 @@ def serve_react(path):
     return send_from_directory(dist, "index.html")
 
 # ─────────────────────────────────────────────────────────────────────────────
+import os
 
 if __name__ == "__main__":
-    ensure_files()
-    print("Starting Finance Tracker on http://localhost:5000")
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=False, host="0.0.0.0", port=port)
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=True
+    )

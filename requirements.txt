@@ -1,4 +1,5 @@
-flask>=3.0.0
-flask-cors>=4.0.0
-anthropic>=0.25.0
-ollama
+flask
+flask-cors
+gunicorn
+pandas
+numpy
